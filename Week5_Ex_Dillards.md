@@ -502,3 +502,65 @@ GROUP BY 1;
 * PARTITION BY comes handy when I tried to rank revenue by each months
 * rank and row_number variable is quoted
 * initially the derived table was named as 'rank', but Teradata rejects the query as 'rank' overlaps with its official reserved key words, and so it is abandoned. To look for more reserved key words, check in this link: [SQL reserved words checker] (https://www.petefreitag.com/tools/sql_reserved_words_checker)
+
+
+
+# exam cases
+
+```sql
+SELECT
+    t.store, d.deptdesc, st.state, st.city,
+    SUM(CASE WHEN EXTRACT(month FROM t.saledate) = 11 THEN amt END) as Nov_rev,
+    COUNT( DISTINCT (CASE WHEN EXTRACT(month FROM t.saledate) = 11 THEN saledate END) ) as Nov_days,
+    SUM(CASE WHEN EXTRACT(month FROM t.saledate) = 12 THEN amt END) as Dec_rev,
+    COUNT( DISTINCT (CASE WHEN EXTRACT(month FROM t.saledate) = 12 THEN saledate END) ) as Dec_days,  
+    100* ( ( Dec_rev / Dec_days ) / (Nov_rev / Nov_days ) - 1 ) as Dec_div_Nov
+  FROM trnsact t
+  JOIN skuinfo s ON t.sku = s.sku
+  JOIN deptinfo d ON s.dept = d.dept
+  JOIN strinfo st ON t.store = st.store
+
+  WHERE ( EXTRACT(MONTH FROM t.saledate) in (11,12) AND t.stype = 'P' )
+  AND s.dept in
+  (from skuinfo s
+  JOIN
+    (
+      SELECT S.dept,
+      SUM(CASE WHEN EXTRACT(month FROM t.saledate) = 11 THEN amt END) as Nov_rev,
+      SUM(CASE WHEN EXTRACT(month FROM t.saledate) = 12 THEN amt END) as Dec_rev
+      FROM trnsact t
+      JOIN skuinfo s ON t.sku = s.sku
+      GROUP BY 1
+      HAVING Nov_rev > 1000 AND Dec_rev > 1000 ) AS  dept_sub ON s.dept = dept_sub.dept )
+  as dept_large
+  GROUP BY 1,2,3,4
+  HAVING Nov_days >= 20 AND Dec_days >=20
+ORDER BY Dec_div_Nov desc;
+;
+
+
+SELECT rank.mon_num, COUNT(rank.mon_num) AS top_mon_ct  
+FROM
+(
+    SELECT rev.store, rev.mon_num, rev.revenue,
+      RANK() OVER(PARTITION BY store ORDER BY revenue ASC) AS "rank_revenue",
+      ROW_NUMBER() OVER(PARTITION BY store ORDER BY revenue ASC) AS "row_number"
+    FROM
+    (
+        SELECT
+             t.store, EXTRACT(month FROM t.saledate) as mon_num,
+             SUM(amt) as revenue
+          FROM trnsact t
+          WHERE t.stype = 'P' AND (NOT ( EXTRACT(MONTH FROM t.saledate) = 8 AND EXTRACT(YEAR FROM t.saledate) = 2005 ) )
+          GROUP BY 1,2
+          HAVING COUNT( DISTINCT t.saledate) >= 20
+    ) AS
+    rev
+) AS
+rank_rev
+WHERE rank_revenue = 1
+GROUP BY 1;
+;
+
+
+```
