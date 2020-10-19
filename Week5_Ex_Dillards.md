@@ -501,4 +501,4 @@ GROUP BY 1;
 ```
 * PARTITION BY comes handy when I tried to rank revenue by each months
 * rank and row_number variable is quoted
-* initially the derived table was named as 'rank', but Teradata rejects the query as 'rank' overlaps with its official reserved key words, and so it is abandoned. To look for more reserved key words, check in this link: [SQL reserved words checker] (https://www.petefreitag.com/tools/sql_reserved_words_checker/)
+* initially the derived table was named as 'rank', but Teradata rejects the query as 'rank' overlaps with its official reserved key words, and so it is abandoned. To look for more reserved key words, check in this link: [SQL reserved words checker] (https://www.petefreitag.com/tools/sql_reserved_words_checker)
